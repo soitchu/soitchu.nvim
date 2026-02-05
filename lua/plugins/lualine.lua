@@ -43,7 +43,12 @@ return {
           vim.cmd("DiffviewOpen HEAD")
         end,
       },
-      "diagnostics",
+      {
+        "diagnostics",
+        on_click = function()
+          vim.cmd("Trouble diagnostics toggle")
+        end,
+      },
     }
     opts.sections.lualine_y = { "filetype" }
     opts.sections.lualine_z = { "location" }

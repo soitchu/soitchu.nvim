@@ -49,3 +49,6 @@ vim.keymap.set("i", "<D-f>", "<Esc>/", { desc = "Search" })
 
 -- Alt+Click to find references
 vim.keymap.set("n", "<A-LeftMouse>", "<LeftMouse><cmd>Telescope lsp_references<cr>", { desc = "Find references" })
+
+-- Ctrl+P to open file finder
+vim.keymap.set("n", "<C-p>", "<leader><leader>", { desc = "Find files", remap = true })
