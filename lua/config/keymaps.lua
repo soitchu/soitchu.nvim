@@ -90,3 +90,8 @@ vim.keymap.set("n", "<C-p>", "<leader><leader>", { desc = "Find files", remap = 
 
 -- Quick quit
 vim.keymap.set("n", "<D-w>", "<cmd>q<cr>", { desc = "Quit" })
+
+-- Toggle comment
+vim.keymap.set("n", "<D-/>", "gcc", { desc = "Toggle comment", remap = true })
+vim.keymap.set("v", "<D-/>", "gcgv", { desc = "Toggle comment", remap = true })
+vim.keymap.set("i", "<D-/>", "<Esc>gcca", { desc = "Toggle comment", remap = true })
