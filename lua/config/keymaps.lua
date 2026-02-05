@@ -87,3 +87,6 @@ end, { desc = "Go to definition or references" })
 
 -- Ctrl+P to open file finder
 vim.keymap.set("n", "<C-p>", "<leader><leader>", { desc = "Find files", remap = true })
+
+-- Quick quit
+vim.keymap.set("n", "<D-w>", "<cmd>q<cr>", { desc = "Quit" })

@@ -10,7 +10,8 @@ vim.g.netrw_list_hide = ""
 vim.o.guifont = "JetBrainsMono Nerd Font:h14"
 
 -- Neovide padding (makes tabs and UI taller)
-vim.g.neovide_padding_top = 8
+vim.g.neovide_padding_top = 12
+vim.g.neovide_padding_bottom = 4
 
 -- Don't move cursor when scrolling
 vim.o.scrolloff = 0

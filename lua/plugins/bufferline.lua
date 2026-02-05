@@ -1,39 +1,38 @@
 return {
-  "akinsho/bufferline.nvim",
-  opts = {
-    options = {
-      tab_size = 20,
-      indicator = {
-        style = "none",
-      },
-      always_show_bufferline = true,
-      separator_style = { "", "" },
-      offsets = {
-        { padding = 1 },
-      },
+  -- Disable bufferline
+  { "akinsho/bufferline.nvim", enabled = false },
+
+  -- Add barbar
+  {
+    "romgrk/barbar.nvim",
+    dependencies = {
+      "nvim-tree/nvim-web-devicons",
     },
-    highlights = function(config)
-      return require("vscode.colors").get_colors()
-        and {
-          fill = { bg = "#181818" },
-          background = { bg = "#181818", fg = "#6e6e6e" },
-          buffer_selected = { bg = "#1f1f1f", fg = "#ffffff", bold = true },
-          buffer_visible = { bg = "#181818", fg = "#6e6e6e" },
-          close_button = { bg = "#181818", fg = "#6e6e6e" },
-          close_button_selected = { bg = "#1f1f1f", fg = "#ffffff" },
-          close_button_visible = { bg = "#181818", fg = "#6e6e6e" },
-          modified = { bg = "#181818" },
-          modified_selected = { bg = "#1f1f1f" },
-          modified_visible = { bg = "#181818" },
-          separator = { bg = "#181818", fg = "#181818" },
-          separator_selected = { bg = "#1f1f1f", fg = "#181818" },
-          separator_visible = { bg = "#181818", fg = "#181818" },
-          indicator_selected = { bg = "#1f1f1f", fg = "#1f1f1f" },
-          duplicate = { bg = "#181818", fg = "#6e6e6e" },
-          duplicate_selected = { bg = "#1f1f1f", fg = "#ffffff" },
-          duplicate_visible = { bg = "#181818", fg = "#6e6e6e" },
-        }
-        or {}
+    init = function()
+      vim.g.barbar_auto_setup = false
+    end,
+    opts = {
+      animation = true,
+      tabpages = true,
+      clickable = true,
+      icons = {
+        buffer_index = false,
+        filetype = { enabled = true },
+        button = "×",
+        separator = { left = "", right = "" },
+        inactive = { separator = { left = "", right = "" } },
+      },
+      highlight_visible = false,
+    },
+    config = function(_, opts)
+      require("barbar").setup(opts)
+      -- Right-click (two-finger tap) to close buffer
+      vim.keymap.set("n", "<RightMouse>", function()
+        local mouse = vim.fn.getmousepos()
+        if mouse.screenrow == 1 then
+          vim.cmd("BufferClose")
+        end
+      end, { desc = "Close buffer on right-click" })
     end,
   },
 }
