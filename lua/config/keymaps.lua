@@ -47,8 +47,43 @@ vim.keymap.set("n", "<D-f>", "/", { desc = "Search" })
 vim.keymap.set("v", "<D-f>", "y/<C-r>\"", { desc = "Search selection" })
 vim.keymap.set("i", "<D-f>", "<Esc>/", { desc = "Search" })
 
--- Alt+Click to find references
-vim.keymap.set("n", "<A-LeftMouse>", "<LeftMouse><cmd>Telescope lsp_references<cr>", { desc = "Find references" })
+-- Ctrl+Click: go to definition, or show references if already at definition
+vim.keymap.set("n", "<C-LeftMouse>", function()
+  -- Move cursor to mouse position
+  local mouse = vim.fn.getmousepos()
+  if mouse.winid ~= 0 then
+    vim.api.nvim_set_current_win(mouse.winid)
+    vim.api.nvim_win_set_cursor(mouse.winid, { mouse.line, mouse.column - 1 })
+  end
+
+  local params = vim.lsp.util.make_position_params()
+  local current_pos = vim.api.nvim_win_get_cursor(0)
+  local current_file = vim.api.nvim_buf_get_name(0)
+
+  vim.lsp.buf_request(0, "textDocument/definition", params, function(err, result)
+    if err or not result or vim.tbl_isempty(result) then
+      vim.cmd("Telescope lsp_references")
+      return
+    end
+
+    local def = result[1] or result
+    local def_uri = def.uri or def.targetUri
+    local def_range = def.range or def.targetSelectionRange
+
+    if def_uri and def_range then
+      local def_file = vim.uri_to_fname(def_uri)
+      local def_line = def_range.start.line + 1
+
+      if def_file == current_file and def_line == current_pos[1] then
+        vim.cmd("Telescope lsp_references")
+      else
+        vim.lsp.buf.definition()
+      end
+    else
+      vim.lsp.buf.definition()
+    end
+  end)
+end, { desc = "Go to definition or references" })
 
 -- Ctrl+P to open file finder
 vim.keymap.set("n", "<C-p>", "<leader><leader>", { desc = "Find files", remap = true })

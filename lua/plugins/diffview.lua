@@ -4,32 +4,42 @@ return {
   keys = {
     { "<C-g>", "<cmd>DiffviewOpen HEAD<cr>", desc = "Diff view" },
   },
-  opts = {
-    view = {
-      default = {
-        layout = "diff2_horizontal",
+  opts = function()
+    local actions = require("diffview.actions")
+    return {
+      keymaps = {
+        view = {
+          { "n", "-", actions.toggle_stage_entry, { desc = "Toggle stage" } },
+          { "n", "s", actions.stage_all, { desc = "Stage all" } },
+          { "n", "u", actions.unstage_all, { desc = "Unstage all" } },
+        },
       },
-      merge_tool = {
-        layout = "diff3_horizontal",
+      view = {
+        default = {
+          layout = "diff2_horizontal",
+        },
+        merge_tool = {
+          layout = "diff3_horizontal",
+        },
+        file_history = {
+          layout = "diff2_horizontal",
+        },
       },
-      file_history = {
-        layout = "diff2_horizontal",
-      },
-    },
-    hooks = {
-      diff_buf_read = function()
-        vim.opt_local.scrollbind = true
-        vim.opt_local.cursorbind = false
-        vim.opt_local.foldenable = true
-        vim.opt_local.foldmethod = "diff"
-        vim.opt_local.foldlevel = 0
+      hooks = {
+        diff_buf_read = function()
+          vim.opt_local.scrollbind = true
+          vim.opt_local.cursorbind = false
+          vim.opt_local.foldenable = true
+          vim.opt_local.foldmethod = "diff"
+          vim.opt_local.foldlevel = 0
 
-        -- Make changes more obvious
-        vim.api.nvim_set_hl(0, "DiffAdd", { bg = "#2e4b2e", bold = true })
-        vim.api.nvim_set_hl(0, "DiffDelete", { bg = "#4b2e2e", bold = true })
-        vim.api.nvim_set_hl(0, "DiffChange", { bg = "#3b3b1f", bold = true })
-        vim.api.nvim_set_hl(0, "DiffText", { bg = "#5f5f00", bold = true, underline = true })
-      end,
-    },
-  },
+          -- Make changes more obvious
+          vim.api.nvim_set_hl(0, "DiffAdd", { bg = "#2e4b2e", bold = true })
+          vim.api.nvim_set_hl(0, "DiffDelete", { bg = "#4b2e2e", bold = true })
+          vim.api.nvim_set_hl(0, "DiffChange", { bg = "#3b3b1f", bold = true })
+          vim.api.nvim_set_hl(0, "DiffText", { bg = "#5f5f00", bold = true, underline = true })
+        end,
+      },
+    }
+  end,
 }

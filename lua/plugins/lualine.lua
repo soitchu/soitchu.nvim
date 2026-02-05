@@ -28,29 +28,29 @@ return {
     timer:start(0, 1000, vim.schedule_wrap(update_git_modified))
 
     local function git_modified_count()
-      if modified_count > 0 then
-        return " " .. modified_count
-      end
-      return ""
+      return " " .. modified_count
     end
 
-    -- Override sections to remove copilot, progress, and time
-    opts.sections.lualine_x = {
+    -- Move changed files count to left, filename to right
+    opts.sections.lualine_c = {
       {
         git_modified_count,
         color = { fg = "#e5c07b" },
         on_click = function()
-          vim.cmd("DiffviewOpen HEAD")
+          vim.cmd("DiffviewOpen")
         end,
       },
+    }
+    opts.sections.lualine_x = {
       {
         "diagnostics",
         on_click = function()
           vim.cmd("Trouble diagnostics toggle")
         end,
       },
+      { "filename", path = 1 },
     }
-    opts.sections.lualine_y = { "filetype" }
+    opts.sections.lualine_y = {}
     opts.sections.lualine_z = { "location" }
   end,
 }
