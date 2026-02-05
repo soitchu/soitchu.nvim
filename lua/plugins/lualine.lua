@@ -50,6 +50,10 @@ return {
       },
       { "filename", path = 1 },
     }
+    -- Brighten branch name
+    opts.sections.lualine_b = {
+      { "branch", color = { fg = "#75beff" } },
+    }
     opts.sections.lualine_y = {}
     opts.sections.lualine_z = { "location" }
   end,
