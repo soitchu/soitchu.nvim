@@ -15,17 +15,19 @@ return {
             modified_count = count
           end
         end,
+        on_exit = function(_, code)
+          -- not a git repo (or git failed): clear the stale count
+          if code ~= 0 then
+            modified_count = 0
+          end
+        end,
       })
     end
 
-    -- Update on save, focus, and startup
-    vim.api.nvim_create_autocmd({ "BufWritePost", "FocusGained", "VimEnter" }, {
+    -- Update on save, focus, dir change, and startup
+    vim.api.nvim_create_autocmd({ "BufWritePost", "FocusGained", "DirChanged", "VimEnter" }, {
       callback = update_git_modified,
     })
-
-    -- Update every second
-    local timer = vim.uv.new_timer()
-    timer:start(0, 1000, vim.schedule_wrap(update_git_modified))
 
     local function git_modified_count()
       return " " .. modified_count

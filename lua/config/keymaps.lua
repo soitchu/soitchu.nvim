@@ -6,7 +6,12 @@ vim.keymap.set({ "n", "i", "v" }, "<D-z>", "<cmd>undo<cr>", { desc = "Undo" })
 vim.keymap.set({ "n", "i", "v" }, "<D-S-z>", "<cmd>redo<cr>", { desc = "Redo" })
 vim.keymap.set("n", "<A-q>", "<cmd>bd<cr>", { desc = "Close buffer" })
 vim.keymap.set("v", "<C-f>", "y/<C-r>\"<cr>", { desc = "Search selection in file" })
-vim.keymap.set({ "n", "t" }, "<C-`>", function() Snacks.terminal.toggle() end, { desc = "Toggle terminal" })
+vim.keymap.set({ "n", "t" }, "<C-`>", function()
+  Snacks.terminal.toggle()
+  vim.schedule(function()
+    vim.cmd("resize +1")
+  end)
+end, { desc = "Toggle terminal" })
 vim.keymap.set("n", "<C-b>", function() Snacks.picker.explorer({ focus = false }) end, { desc = "Toggle explorer" })
 vim.keymap.set("n", "<leader>z", "<cmd>set wrap!<cr>", { desc = "Toggle word wrap" })
 -- Select all
@@ -24,16 +29,28 @@ vim.keymap.set("v", "<D-x>", '"+d', { desc = "Cut" })
 vim.keymap.set("i", "<D-x>", '<Esc>"+dda', { desc = "Cut line" })
 
 -- Paste
-vim.keymap.set("n", "<D-v>", '"+p', { desc = "Paste" })
 vim.keymap.set("v", "<D-v>", '"+p', { desc = "Paste" })
 vim.keymap.set("i", "<D-v>", '<C-r>+', { desc = "Paste" })
+vim.keymap.set("t", "<D-v>", '<C-\\><C-n>"+pa', { desc = "Paste" })
+
+-- Shift+Arrow selection
+vim.keymap.set("n", "<S-Left>", "vh", { desc = "Select left" })
+vim.keymap.set("n", "<S-Right>", "vl", { desc = "Select right" })
+vim.keymap.set("n", "<S-Up>", "Vk", { desc = "Select up" })
+vim.keymap.set("n", "<S-Down>", "Vj", { desc = "Select down" })
+vim.keymap.set("v", "<S-Left>", "h", { desc = "Select left" })
+vim.keymap.set("v", "<S-Right>", "l", { desc = "Select right" })
+vim.keymap.set("v", "<S-Up>", "k", { desc = "Select up" })
+vim.keymap.set("v", "<S-Down>", "j", { desc = "Select down" })
+vim.keymap.set("i", "<S-Left>", "<Esc>vh", { desc = "Select left" })
+vim.keymap.set("i", "<S-Right>", "<Esc>vl", { desc = "Select right" })
+vim.keymap.set("i", "<S-Up>", "<Esc>Vk", { desc = "Select up" })
+vim.keymap.set("i", "<S-Down>", "<Esc>Vj", { desc = "Select down" })
 
 -- Delete selection with backspace
 vim.keymap.set("v", "<BS>", "d", { desc = "Delete selection" })
 
 -- Indent/Outdent
-vim.keymap.set("n", "<D-]>", ">>", { desc = "Indent" })
-vim.keymap.set("n", "<D-[>", "<<", { desc = "Outdent" })
 vim.keymap.set("v", "<D-]>", ">gv", { desc = "Indent" })
 vim.keymap.set("v", "<D-[>", "<gv", { desc = "Outdent" })
 vim.keymap.set("i", "<D-]>", "<C-t>", { desc = "Indent" })
@@ -56,7 +73,8 @@ vim.keymap.set("n", "<C-LeftMouse>", function()
     vim.api.nvim_win_set_cursor(mouse.winid, { mouse.line, mouse.column - 1 })
   end
 
-  local params = vim.lsp.util.make_position_params()
+  local client = vim.lsp.get_clients({ bufnr = 0 })[1]
+  local params = vim.lsp.util.make_position_params(0, client and client.offset_encoding or "utf-16")
   local current_pos = vim.api.nvim_win_get_cursor(0)
   local current_file = vim.api.nvim_buf_get_name(0)
 
@@ -91,7 +109,103 @@ vim.keymap.set("n", "<C-p>", "<leader><leader>", { desc = "Find files", remap = 
 -- Quick quit
 vim.keymap.set("n", "<D-w>", "<cmd>q<cr>", { desc = "Quit" })
 
+-- Delete word backwards
+vim.keymap.set("i", "<C-BS>", "<C-w>", { desc = "Delete word backwards" })
+
 -- Toggle comment
-vim.keymap.set("n", "<D-/>", "gcc", { desc = "Toggle comment", remap = true })
 vim.keymap.set("v", "<D-/>", "gcgv", { desc = "Toggle comment", remap = true })
 vim.keymap.set("i", "<D-/>", "<Esc>gcca", { desc = "Toggle comment", remap = true })
+
+-- Toggle diffview. This lives here rather than in the plugin's `keys` spec
+-- because LazyVim maps <leader>gd to the Snacks git_diff picker on VeryLazy,
+-- which runs *after* lazy.nvim installs `keys` handlers and would win.
+-- config/keymaps.lua is loaded after LazyVim's own keymaps, so this sticks.
+vim.keymap.set("n", "<leader>gd", function()
+  local ok, lib = pcall(require, "diffview.lib")
+  if ok and next(lib.views) then
+    vim.cmd("DiffviewClose")
+    return
+  end
+
+  -- Diffview resolves the repo from the cwd, which under Neovide is wherever
+  -- the app was launched from (often ~ or /) rather than a worktree -- hence
+  -- "Not a repo (or any parent), or no supported VCS adapter!". Resolve from
+  -- the current buffer instead and hand diffview an explicit -C path.
+  local name = vim.api.nvim_buf_get_name(0)
+  local from = name ~= "" and vim.fs.dirname(name) or (vim.uv or vim.loop).cwd()
+  local root = vim.fs.root(from, ".git")
+
+  if not root then
+    vim.notify("Not inside a git repository: " .. from, vim.log.levels.WARN)
+    return
+  end
+
+  vim.cmd("DiffviewOpen -C " .. vim.fn.fnameescape(root) .. " HEAD")
+end, { desc = "Toggle diff view" })
+
+-- Alt + hjkl moves between windows, zellij style. Normal mode only, so
+-- LazyVim's <A-j>/<A-k> "move line up/down" still work in insert and visual.
+--
+-- Horizontally it cascades: move a window if there is one, else step through
+-- the barbar buffer tabs, and once you're on the last/first barbar buffer,
+-- move to the next/previous tabpage (landing on its nearest window).
+local function barbar_index()
+  local ok, state = pcall(require, "barbar.state")
+  if not ok then
+    return nil, 0
+  end
+  local current = vim.api.nvim_get_current_buf()
+  for i, bufnr in ipairs(state.buffers) do
+    if bufnr == current then
+      return i, #state.buffers
+    end
+  end
+  return nil, #state.buffers
+end
+
+---@param direction "h"|"l"
+local function nav_horizontal(direction)
+  return function()
+    local from = vim.api.nvim_get_current_win()
+    vim.cmd("wincmd " .. direction)
+    if vim.api.nvim_get_current_win() ~= from then
+      return -- moved to another window; done
+    end
+
+    -- At the edge of the window layout: try the barbar buffers next.
+    local index, count = barbar_index()
+    local forward = direction == "l"
+    if index and (forward and index < count or not forward and index > 1) then
+      pcall(vim.cmd, forward and "BufferNext" or "BufferPrevious")
+      return
+    end
+
+    -- On the last/first barbar buffer: move to the adjacent tabpage and land
+    -- on the window nearest the edge we came from.
+    if #vim.api.nvim_list_tabpages() < 2 then
+      return
+    end
+    vim.cmd(forward and "tabnext" or "tabprevious")
+    vim.cmd("wincmd " .. (forward and "t" or "b"))
+  end
+end
+
+vim.keymap.set("n", "<A-h>", nav_horizontal("h"), { desc = "Window/buffer/tab left" })
+vim.keymap.set("n", "<A-l>", nav_horizontal("l"), { desc = "Window/buffer/tab right" })
+vim.keymap.set("n", "<A-j>", "<C-w>j", { desc = "Go to lower window" })
+vim.keymap.set("n", "<A-k>", "<C-w>k", { desc = "Go to upper window" })
+
+-- Alt + arrows: macOS-style word jumps horizontally, page scroll vertically.
+vim.keymap.set("n", "<A-Left>", "b", { desc = "Previous word" })
+vim.keymap.set("n", "<A-Right>", "w", { desc = "Next word" })
+vim.keymap.set("n", "<A-Up>", "<C-b>", { desc = "Page up" })
+vim.keymap.set("n", "<A-Down>", "<C-f>", { desc = "Page down" })
+
+-- Close every listed buffer that has no unsaved changes, keeping modified ones.
+vim.keymap.set("n", "<leader>bA", function()
+  Snacks.bufdelete.delete({
+    filter = function(buf)
+      return vim.bo[buf].buflisted and not vim.bo[buf].modified
+    end,
+  })
+end, { desc = "Delete Saved Buffers" })
