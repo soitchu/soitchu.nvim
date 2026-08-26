@@ -140,7 +140,8 @@ vim.keymap.set("n", "<leader>gd", function()
     return
   end
 
-  vim.cmd("DiffviewOpen -C " .. vim.fn.fnameescape(root) .. " HEAD")
+  -- diffview's arg parser wants `-C=<path>`; `-C <path>` is silently ignored
+  vim.cmd("DiffviewOpen -C=" .. vim.fn.fnameescape(root) .. " HEAD")
 end, { desc = "Toggle diff view" })
 
 -- Alt + hjkl moves between windows, zellij style. Normal mode only, so
@@ -201,11 +202,35 @@ vim.keymap.set("n", "<A-Right>", "w", { desc = "Next word" })
 vim.keymap.set("n", "<A-Up>", "<C-b>", { desc = "Page up" })
 vim.keymap.set("n", "<A-Down>", "<C-f>", { desc = "Page down" })
 
--- Close every listed buffer that has no unsaved changes, keeping modified ones.
+-- Close barbar tabs that aren't backed by a file on disk: [No Name] scratch
+-- buffers and buffers named after a file that was never written. `force`
+-- skips the save prompt, so whatever was typed in them is discarded.
+-- Real files are left alone, saved or not.
 vim.keymap.set("n", "<leader>bA", function()
   Snacks.bufdelete.delete({
+    force = true,
     filter = function(buf)
-      return vim.bo[buf].buflisted and not vim.bo[buf].modified
+      if not vim.bo[buf].buflisted or vim.bo[buf].buftype ~= "" then
+        return false -- unlisted, or a terminal/special buffer
+      end
+      local name = vim.api.nvim_buf_get_name(buf)
+      return name == "" or not (vim.uv or vim.loop).fs_stat(name)
     end,
   })
-end, { desc = "Delete Saved Buffers" })
+end, { desc = "Delete Buffers Without a File" })
+
+-- Jump to the active worktree. ~/app/current is a symlink that moves between
+-- branches/*, so resolve it each time rather than caching the target.
+vim.keymap.set("n", "<leader>gw", function()
+  local target = vim.uv.fs_realpath(vim.fn.expand("~/app/current"))
+  if not target then
+    vim.notify("~/app/current does not resolve", vim.log.levels.WARN)
+    return
+  end
+  vim.cmd.cd(vim.fn.fnameescape(target))
+  vim.notify("cwd: " .. vim.fn.fnamemodify(target, ":~"))
+end, { desc = "cd to current worktree" })
+
+-- <leader>j/k page down/up, mirroring <A-Down>/<A-Up>.
+vim.keymap.set({ "n", "x" }, "<leader>j", "<C-f>", { desc = "Page down" })
+vim.keymap.set({ "n", "x" }, "<leader>k", "<C-b>", { desc = "Page up" })

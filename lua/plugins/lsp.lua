@@ -12,8 +12,6 @@ return {
   "neovim/nvim-lspconfig",
   opts = {
     servers = {
-      vtsls = { enabled = false },
-
       -- lspconfig's tsgo/biome definitions prefer `<root>/node_modules/.bin/<bin>`
       -- when it exists. Under branches/*, node_modules is installed inside the
       -- Linux dev container, so those are linux-arm64 builds that die instantly
