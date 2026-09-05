@@ -140,8 +140,12 @@ vim.keymap.set("n", "<leader>gd", function()
     return
   end
 
-  -- diffview's arg parser wants `-C=<path>`; `-C <path>` is silently ignored
-  vim.cmd("DiffviewOpen -C=" .. vim.fn.fnameescape(root) .. " HEAD")
+  -- No rev argument: diffview only allows staging when the view is
+  -- index-vs-working-tree (listeners.lua guards on left.type == STAGE), so
+  -- passing `HEAD` makes `-`/`s`/`S`/`U` silently no-op. Use <leader>gr for
+  -- the whole-branch view instead.
+  -- Note diffview's arg parser wants `-C=<path>`; `-C <path>` is ignored.
+  vim.cmd("DiffviewOpen -C=" .. vim.fn.fnameescape(root))
 end, { desc = "Toggle diff view" })
 
 -- Alt + hjkl moves between windows, zellij style. Normal mode only, so
