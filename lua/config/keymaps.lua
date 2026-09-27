@@ -2,8 +2,15 @@
 -- Default keymaps that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua
 -- Add any additional keymaps here
 
-vim.keymap.set({ "n", "i", "v" }, "<D-z>", "<cmd>undo<cr>", { desc = "Undo" })
-vim.keymap.set({ "n", "i", "v" }, "<D-S-z>", "<cmd>redo<cr>", { desc = "Redo" })
+-- Editor-style shortcuts sit on Cmd on macOS and on Ctrl elsewhere, the way
+-- VS Code does it: cmd("c") is <D-c> on a Mac and <C-c> on Linux.
+local is_mac = vim.fn.has("mac") == 1
+local function cmd(key)
+  return ("<%s-%s>"):format(is_mac and "D" or "C", key)
+end
+
+vim.keymap.set({ "n", "i", "v" }, cmd("z"), "<cmd>undo<cr>", { desc = "Undo" })
+vim.keymap.set({ "n", "i", "v" }, cmd("S-z"), "<cmd>redo<cr>", { desc = "Redo" })
 vim.keymap.set("n", "<A-q>", "<cmd>bd<cr>", { desc = "Close buffer" })
 vim.keymap.set("v", "<C-f>", "y/<C-r>\"<cr>", { desc = "Search selection in file" })
 vim.keymap.set({ "n", "t" }, "<C-`>", function()
@@ -15,23 +22,23 @@ end, { desc = "Toggle terminal" })
 vim.keymap.set("n", "<C-b>", function() Snacks.picker.explorer({ focus = false }) end, { desc = "Toggle explorer" })
 vim.keymap.set("n", "<leader>z", "<cmd>set wrap!<cr>", { desc = "Toggle word wrap" })
 -- Select all
-vim.keymap.set({ "n", "v" }, "<D-a>", "ggVG", { desc = "Select all" })
-vim.keymap.set("i", "<D-a>", "<Esc>ggVG", { desc = "Select all" })
+vim.keymap.set({ "n", "v" }, cmd("a"), "ggVG", { desc = "Select all" })
+vim.keymap.set("i", cmd("a"), "<Esc>ggVG", { desc = "Select all" })
 
 -- Copy
-vim.keymap.set("n", "<D-c>", '"+yy', { desc = "Copy line" })
-vim.keymap.set("v", "<D-c>", '"+y`]', { desc = "Copy" })
-vim.keymap.set("i", "<D-c>", '<Esc>"+yya', { desc = "Copy line" })
+vim.keymap.set("n", cmd("c"), '"+yy', { desc = "Copy line" })
+vim.keymap.set("v", cmd("c"), '"+y`]', { desc = "Copy" })
+vim.keymap.set("i", cmd("c"), '<Esc>"+yya', { desc = "Copy line" })
 
 -- Cut
-vim.keymap.set("n", "<D-x>", '"+dd', { desc = "Cut line" })
-vim.keymap.set("v", "<D-x>", '"+d', { desc = "Cut" })
-vim.keymap.set("i", "<D-x>", '<Esc>"+dda', { desc = "Cut line" })
+vim.keymap.set("n", cmd("x"), '"+dd', { desc = "Cut line" })
+vim.keymap.set("v", cmd("x"), '"+d', { desc = "Cut" })
+vim.keymap.set("i", cmd("x"), '<Esc>"+dda', { desc = "Cut line" })
 
 -- Paste
-vim.keymap.set("v", "<D-v>", '"+p', { desc = "Paste" })
-vim.keymap.set("i", "<D-v>", '<C-r>+', { desc = "Paste" })
-vim.keymap.set("t", "<D-v>", '<C-\\><C-n>"+pa', { desc = "Paste" })
+vim.keymap.set("v", cmd("v"), '"+p', { desc = "Paste" })
+vim.keymap.set("i", cmd("v"), '<C-r>+', { desc = "Paste" })
+vim.keymap.set("t", cmd("v"), '<C-\\><C-n>"+pa', { desc = "Paste" })
 
 -- Shift+Arrow selection
 vim.keymap.set("n", "<S-Left>", "vh", { desc = "Select left" })
@@ -50,19 +57,26 @@ vim.keymap.set("i", "<S-Down>", "<Esc>Vj", { desc = "Select down" })
 -- Delete selection with backspace
 vim.keymap.set("v", "<BS>", "d", { desc = "Delete selection" })
 
--- Indent/Outdent
-vim.keymap.set("v", "<D-]>", ">gv", { desc = "Indent" })
-vim.keymap.set("v", "<D-[>", "<gv", { desc = "Outdent" })
-vim.keymap.set("i", "<D-]>", "<C-t>", { desc = "Indent" })
-vim.keymap.set("i", "<D-[>", "<C-d>", { desc = "Outdent" })
+-- Indent/Outdent. macOS only: on Linux <C-[> *is* <Esc>, and <C-]> is Copilot's
+-- dismiss. Use the built-in >/< (visual) and <C-t>/<C-d> (insert) there.
+if is_mac then
+  vim.keymap.set("v", "<D-]>", ">gv", { desc = "Indent" })
+  vim.keymap.set("v", "<D-[>", "<gv", { desc = "Outdent" })
+  vim.keymap.set("i", "<D-]>", "<C-t>", { desc = "Indent" })
+  vim.keymap.set("i", "<D-[>", "<C-d>", { desc = "Outdent" })
+end
 
--- Save
-vim.keymap.set({ "n", "i", "v" }, "<D-s>", "<cmd>w<cr>", { desc = "Save" })
+-- Save. LazyVim already maps <C-s> to save, so this is only needed on macOS.
+if is_mac then
+  vim.keymap.set({ "n", "i", "v" }, "<D-s>", "<cmd>w<cr>", { desc = "Save" })
+end
 
--- Search
-vim.keymap.set("n", "<D-f>", "/", { desc = "Search" })
-vim.keymap.set("v", "<D-f>", "y/<C-r>\"", { desc = "Search selection" })
-vim.keymap.set("i", "<D-f>", "<Esc>/", { desc = "Search" })
+-- Search. On Linux, visual <C-f> keeps the search-selection map near the top.
+vim.keymap.set("n", cmd("f"), "/", { desc = "Search" })
+if is_mac then
+  vim.keymap.set("v", "<D-f>", "y/<C-r>\"", { desc = "Search selection" })
+end
+vim.keymap.set("i", cmd("f"), "<Esc>/", { desc = "Search" })
 
 -- Ctrl+Click: go to definition, or show references if already at definition
 vim.keymap.set("n", "<C-LeftMouse>", function()
@@ -106,15 +120,19 @@ end, { desc = "Go to definition or references" })
 -- Ctrl+P to open file finder
 vim.keymap.set("n", "<C-p>", "<leader><leader>", { desc = "Find files", remap = true })
 
--- Quick quit
-vim.keymap.set("n", "<D-w>", "<cmd>q<cr>", { desc = "Quit" })
+-- Quick quit. macOS only: <C-w> is Vim's window-command prefix.
+if is_mac then
+  vim.keymap.set("n", "<D-w>", "<cmd>q<cr>", { desc = "Quit" })
+end
 
 -- Delete word backwards
 vim.keymap.set("i", "<C-BS>", "<C-w>", { desc = "Delete word backwards" })
 
--- Toggle comment
-vim.keymap.set("v", "<D-/>", "gcgv", { desc = "Toggle comment", remap = true })
-vim.keymap.set("i", "<D-/>", "<Esc>gcca", { desc = "Toggle comment", remap = true })
+-- Toggle comment. Most terminals send Ctrl+/ as <C-_>, so map both on Linux.
+for _, key in ipairs(is_mac and { "<D-/>" } or { "<C-/>", "<C-_>" }) do
+  vim.keymap.set("v", key, "gcgv", { desc = "Toggle comment", remap = true })
+  vim.keymap.set("i", key, "<Esc>gcca", { desc = "Toggle comment", remap = true })
+end
 
 -- Toggle diffview. This lives here rather than in the plugin's `keys` spec
 -- because LazyVim maps <leader>gd to the Snacks git_diff picker on VeryLazy,
