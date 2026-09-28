@@ -12,6 +12,15 @@ return {
   "neovim/nvim-lspconfig",
   opts = {
     servers = {
+      -- Trouble's lsp_references mode groups hits by file (it sets
+      -- `groups = { { "filename", ... } }`), which reads far better than the
+      -- flat picker list once a symbol has more than a handful of references.
+      ["*"] = {
+        keys = {
+          { "gr", "<cmd>Trouble lsp_references toggle focus=true<cr>", desc = "References", has = "references" },
+        },
+      },
+
       -- lspconfig's tsgo/biome definitions prefer `<root>/node_modules/.bin/<bin>`
       -- when it exists. Under branches/*, node_modules is installed inside the
       -- Linux dev container, so those are linux-arm64 builds that die instantly

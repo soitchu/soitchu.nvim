@@ -256,3 +256,58 @@ end, { desc = "cd to current worktree" })
 -- <leader>j/k page down/up, mirroring <A-Down>/<A-Up>.
 vim.keymap.set({ "n", "x" }, "<leader>j", "<C-f>", { desc = "Page down" })
 vim.keymap.set({ "n", "x" }, "<leader>k", "<C-b>", { desc = "Page up" })
+
+-- Neovide UI zoom. Scales everything (text, icons, padding) live, unlike
+-- `guifont`, which sets the base size and only applies on restart. The factor
+-- is persisted so it survives restarts -- Neovide itself always starts at 1.
+if vim.g.neovide then
+  local scale_file = vim.fn.stdpath("state") .. "/neovide-scale-factor"
+
+  local function set_scale(factor)
+    vim.g.neovide_scale_factor = math.max(0.5, math.min(3, factor))
+    pcall(vim.fn.writefile, { tostring(vim.g.neovide_scale_factor) }, scale_file)
+  end
+
+  -- Restore whatever was saved last. Guarded: a truncated or hand-edited file
+  -- must not leave the UI stuck at an unreadable size.
+  local saved = vim.fn.filereadable(scale_file) == 1 and tonumber(vim.fn.readfile(scale_file)[1] or "")
+  vim.g.neovide_scale_factor = (saved and saved >= 0.5 and saved <= 3) and saved or 1
+
+  local function zoom(by)
+    set_scale((vim.g.neovide_scale_factor or 1) * by)
+    vim.notify(("zoom: %d%%"):format(math.floor(vim.g.neovide_scale_factor * 100 + 0.5)))
+  end
+
+  vim.keymap.set({ "n", "i", "v" }, cmd("="), function()
+    zoom(1.1)
+  end, { desc = "Zoom in" })
+  vim.keymap.set({ "n", "i", "v" }, cmd("-"), function()
+    zoom(1 / 1.1)
+  end, { desc = "Zoom out" })
+  vim.keymap.set({ "n", "i", "v" }, cmd("0"), function()
+    set_scale(1)
+    vim.notify("zoom: 100%")
+  end, { desc = "Reset zoom" })
+end
+
+-- Resize windows. macOS only: Mission Control claims LazyVim's <C-Up>/<C-Down>/
+-- <C-Left>/<C-Right> (Move left/right a space, Mission Control, Application
+-- windows) before Neovide ever sees the keypress. Elsewhere those defaults work
+-- fine, and <D-C-...> has no Ctrl equivalent worth inventing.
+-- 10 columns / 5 rows per press; the bare <C-w> verbs move by 1, far too slow.
+if is_mac then
+  vim.keymap.set("n", "<D-C-h>", "10<C-w><", { desc = "Decrease window width" })
+  vim.keymap.set("n", "<D-C-l>", "10<C-w>>", { desc = "Increase window width" })
+  vim.keymap.set("n", "<D-C-j>", "5<C-w>-", { desc = "Decrease window height" })
+  vim.keymap.set("n", "<D-C-k>", "5<C-w>+", { desc = "Increase window height" })
+end
+
+-- Neovim 0.11 ships default LSP mappings (grr, gri, gra, grn, grt) that all
+-- start with `gr`. LazyVim binds `gr` itself, so each press has to wait out
+-- `timeoutlen` in case another key follows, and a stray second key fires the
+-- built-in instead -- `grr` dumps references into the quickfix list. Drop the
+-- built-ins: <leader>c* and g* already cover everything they do.
+for _, lhs in ipairs({ "grr", "gri", "gra", "grn", "grt" }) do
+  pcall(vim.keymap.del, "n", lhs)
+  pcall(vim.keymap.del, "x", lhs)
+end

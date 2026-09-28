@@ -7,7 +7,7 @@ vim.g.netrw_hide = 0
 vim.g.netrw_list_hide = ""
 
 -- Neovide font
-vim.o.guifont = "JetBrainsMono Nerd Font:h14"
+vim.o.guifont = "3270 Nerd Font Mono:h16"
 
 -- On macOS, Option composes special characters by default (h/j/k/l become
 -- ˙∆˚¬), so <A-...> mappings never reach Neovim. Send Meta instead.
