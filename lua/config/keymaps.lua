@@ -78,6 +78,13 @@ if is_mac then
 end
 vim.keymap.set("i", cmd("f"), "<Esc>/", { desc = "Search" })
 
+-- VS Code-style find/replace widget for the current buffer. <leader>r is free
+-- unless the editor.refactoring extra is enabled, which claims the r prefix.
+-- See lua/find_replace.lua for the keys inside it.
+vim.keymap.set({ "n", "x" }, "<leader>r", function()
+  require("find_replace").open()
+end, { desc = "Find and replace" })
+
 -- Ctrl+Click: go to definition, or show references if already at definition
 vim.keymap.set("n", "<C-LeftMouse>", function()
   -- Move cursor to mouse position
@@ -240,6 +247,10 @@ vim.keymap.set("n", "<leader>bA", function()
     end,
   })
 end, { desc = "Delete Buffers Without a File" })
+
+-- Throw away unsaved edits and reload the file from disk. The discarded
+-- changes stay in the undo history, so `u` brings them back.
+vim.keymap.set("n", "<leader>bR", "<cmd>edit!<cr>", { desc = "Revert Buffer to Saved" })
 
 -- Jump to the active worktree. ~/app/current is a symlink that moves between
 -- branches/*, so resolve it each time rather than caching the target.
