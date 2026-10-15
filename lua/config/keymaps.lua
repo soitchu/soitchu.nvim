@@ -12,7 +12,6 @@ end
 vim.keymap.set({ "n", "i", "v" }, cmd("z"), "<cmd>undo<cr>", { desc = "Undo" })
 vim.keymap.set({ "n", "i", "v" }, cmd("S-z"), "<cmd>redo<cr>", { desc = "Redo" })
 vim.keymap.set("n", "<A-q>", "<cmd>bd<cr>", { desc = "Close buffer" })
-vim.keymap.set("v", "<C-f>", "y/<C-r>\"<cr>", { desc = "Search selection in file" })
 vim.keymap.set({ "n", "t" }, "<C-`>", function()
   Snacks.terminal.toggle()
   vim.schedule(function()
@@ -71,10 +70,47 @@ if is_mac then
   vim.keymap.set({ "n", "i", "v" }, "<D-s>", "<cmd>w<cr>", { desc = "Save" })
 end
 
--- Search. On Linux, visual <C-f> keeps the search-selection map near the top.
+-- Search
 vim.keymap.set("n", cmd("f"), "/", { desc = "Search" })
+
+-- The visual selection as a literal search pattern, multi-line included.
+-- Under `\V` only `\` is special; `/` is escaped because it would end the
+-- pattern on the command line, and line breaks become `\n`.
+local function selection_pattern()
+  local lines = vim.fn.getregion(vim.fn.getpos("v"), vim.fn.getpos("."), { type = vim.fn.mode() })
+  local escaped = vim.tbl_map(function(line)
+    return vim.fn.escape(line, "\\/")
+  end, lines)
+  return "\\V" .. table.concat(escaped, "\\n")
+end
+
+-- Leave visual mode with the cursor on the first selected character.
+local function exit_to_selection_start()
+  local v, c = vim.fn.getpos("v"), vim.fn.getpos(".")
+  local first = (v[2] < c[2] or (v[2] == c[2] and v[3] <= c[3])) and v or c
+  local linewise = vim.fn.mode() == "V"
+  vim.api.nvim_feedkeys(vim.keycode("<Esc>"), "nx", false)
+  vim.api.nvim_win_set_cursor(0, { first[2], linewise and 0 or first[3] - 1 })
+end
+
+-- <C-f>: search the selection right away, staying on it so `n` goes to the next.
+vim.keymap.set("x", "<C-f>", function()
+  local pattern = selection_pattern()
+  exit_to_selection_start()
+  vim.fn.setreg("/", pattern)
+  vim.fn.histadd("/", pattern)
+  vim.v.searchforward = 1
+  vim.v.hlsearch = 1
+  vim.fn.search(pattern, "c")
+end, { desc = "Search selection in file" })
+
+-- Cmd+F: put the selection on the search line to edit before pressing Enter.
 if is_mac then
-  vim.keymap.set("v", "<D-f>", "y/<C-r>\"", { desc = "Search selection" })
+  vim.keymap.set("x", "<D-f>", function()
+    local pattern = selection_pattern()
+    exit_to_selection_start()
+    vim.api.nvim_feedkeys("/" .. pattern, "ni", false)
+  end, { desc = "Search selection" })
 end
 vim.keymap.set("i", cmd("f"), "<Esc>/", { desc = "Search" })
 
