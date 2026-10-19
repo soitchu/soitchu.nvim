@@ -46,6 +46,101 @@ local function close_buffers_opened_by_view()
   buffers_opened_by_view = {}
 end
 
+-- Diffview only refreshes when Neovim writes a buffer or .git/index changes.
+-- Edits made elsewhere (another editor, a docker container) touch neither, so
+-- the view goes stale until something else runs `git status`. So watch the
+-- repo ourselves: on any file change, reload on-screen files that changed on
+-- disk and re-read the file list. A slow poll backs the watcher up in case an
+-- event gets lost.
+local uv = vim.uv or vim.loop
+local REFRESH_GAP_MS = 1000 -- at most one refresh per second, however busy the repo
+local POLL_MS = 5000
+
+---@type { root: string, fs_event: uv.uv_fs_event_t, poll: uv.uv_timer_t, pending: uv.uv_timer_t, last: integer }?
+local watch = nil
+
+local function stop_watching()
+  if not watch then
+    return
+  end
+  for _, handle in ipairs({ watch.fs_event, watch.poll, watch.pending }) do
+    if not handle:is_closing() then
+      handle:stop()
+      handle:close()
+    end
+  end
+  watch = nil
+end
+
+-- Returns false when now is a bad time and the refresh should be retried.
+local function refresh()
+  local lib = require("diffview.lib")
+  if not next(lib.views) then
+    stop_watching()
+    return true
+  end
+  -- Another tab: diffview re-reads the file list itself on tab enter.
+  if not lib.get_current_view() then
+    return true
+  end
+  -- Don't yank things around mid-edit or mid-command.
+  if vim.api.nvim_get_mode().mode ~= "n" then
+    return false
+  end
+  watch.last = uv.now()
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    if vim.bo[buf].buftype == "" and not vim.bo[buf].modified then
+      vim.cmd.checktime(buf)
+    end
+  end
+  vim.cmd("DiffviewRefresh")
+  return true
+end
+
+-- Throttle rather than debounce: a dev server rewriting build output nonstop
+-- would starve a debounce forever, while this still refreshes once a second.
+local function schedule_refresh(delay)
+  if not watch or watch.pending:is_active() then
+    return
+  end
+  delay = delay or math.max(100, REFRESH_GAP_MS - (uv.now() - watch.last))
+  watch.pending:start(delay, 0, vim.schedule_wrap(function()
+    if watch and not refresh() then
+      schedule_refresh(500)
+    end
+  end))
+end
+
+local function watch_view(view)
+  local root = view and view.adapter and view.adapter.ctx.toplevel
+  if not root or (watch and watch.root == root) then
+    return
+  end
+  stop_watching()
+  watch = {
+    root = root,
+    fs_event = uv.new_fs_event(),
+    poll = uv.new_timer(),
+    pending = uv.new_timer(),
+    last = 0,
+  }
+  -- Recursive watching is native on macOS (FSEvents). .git/ churns on every
+  -- git command, including the ones a refresh runs, so ignore it; diffview
+  -- already watches .git/index itself.
+  watch.fs_event:start(root, { recursive = true }, function(err, filename)
+    if err or not filename or filename == ".git" or filename:sub(1, 5) == ".git/" then
+      return
+    end
+    schedule_refresh()
+  end)
+  watch.poll:start(POLL_MS, POLL_MS, vim.schedule_wrap(function()
+    if watch then
+      refresh()
+    end
+  end))
+end
+
 return {
   "sindrets/diffview.nvim",
   cmd = { "DiffviewOpen", "DiffviewClose", "DiffviewFileHistory" },
@@ -92,12 +187,23 @@ return {
           vim.api.nvim_set_hl(0, "DiffChange", { bg = "#3b3b1f", bold = true })
           vim.api.nvim_set_hl(0, "DiffText", { bg = "#5f5f00", bold = true, underline = true })
         end,
-        view_closed = close_buffers_opened_by_view,
+        view_closed = function(view)
+          close_buffers_opened_by_view(view)
+          -- The closed view is dropped from the list after this hook runs.
+          vim.schedule(function()
+            if not next(require("diffview.lib").views) then
+              stop_watching()
+            end
+          end)
+        end,
+        -- Several views can be open in different repos; watch the one in front.
+        view_enter = watch_view,
         diff_buf_win_enter = function(bufnr)
           unlist_if_new(bufnr)
         end,
-        view_opened = function()
+        view_opened = function(view)
           buffers_before_view = buffers_before_view or snapshot_listed_buffers()
+          watch_view(view)
           -- Fix file panel colors
           vim.api.nvim_set_hl(0, "DiffviewFilePanelTitle", { fg = "#cccccc", bold = true })
           vim.api.nvim_set_hl(0, "DiffviewFilePanelCounter", { fg = "#cccccc" })
