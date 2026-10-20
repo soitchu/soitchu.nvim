@@ -32,3 +32,36 @@ vim.treesitter.language.register("markdown", "mdx")
 -- anything set in lua/plugins/lsp.lua. Without this it defaults to vtsls and
 -- tsgo is never configured or enabled.
 vim.g.lazyvim_ts_lsp = "tsgo"
+
+-- Clipboard over SSH. Neovim runs on a Linux box with the UI attached over SSH,
+-- and the box has no clipboard of its own, so yanks never reached the Mac.
+-- Send copies to the local terminal as OSC 52 instead; WezTerm puts them on
+-- the system clipboard. WezTerm doesn't answer OSC 52 *paste* requests (Neovim
+-- would hang waiting), so `p` pastes the last thing yanked here, and text
+-- copied on the Mac goes in with Cmd+V, which the terminal types in.
+local has_clipboard_tool = vim.fn.has("mac") == 1
+  or vim.fn.executable("wl-copy") == 1
+  or vim.fn.executable("xclip") == 1
+  or vim.fn.executable("xsel") == 1
+if not has_clipboard_tool then
+  local osc52 = require("vim.ui.clipboard.osc52")
+  local last = { {}, "v" } -- shared by + and *, like a real clipboard
+
+  local function copy(reg)
+    local send = osc52.copy(reg)
+    return function(lines, regtype)
+      last = { lines, regtype }
+      send(lines)
+    end
+  end
+
+  local function paste()
+    return last
+  end
+
+  vim.g.clipboard = {
+    name = "osc52-copy",
+    copy = { ["+"] = copy("+"), ["*"] = copy("*") },
+    paste = { ["+"] = paste, ["*"] = paste },
+  }
+end
