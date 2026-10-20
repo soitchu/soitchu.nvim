@@ -69,3 +69,61 @@ vim.api.nvim_create_autocmd("BufWinEnter", {
     end)
   end,
 })
+
+-- VS Code-style selection highlight: while a charwise selection sits on one
+-- line, mark the other occurrences of that exact text in the visible part of
+-- the window. Only the visible lines are scanned, so it stays cheap on big
+-- files; scrolling re-runs it.
+local selection_ns = vim.api.nvim_create_namespace("selection_matches")
+
+-- VS Code's selectionHighlightBackground (#ADD6FF26) over the editor background.
+local function set_selection_match_hl()
+  vim.api.nvim_set_hl(0, "SelectionMatch", { bg = "#3a3f45", default = true })
+end
+set_selection_match_hl()
+
+local function highlight_selection_matches()
+  local buf = vim.api.nvim_get_current_buf()
+  vim.api.nvim_buf_clear_namespace(buf, selection_ns, 0, -1)
+  if vim.fn.mode() ~= "v" then
+    return
+  end
+  local v, c = vim.fn.getpos("v"), vim.fn.getpos(".")
+  if v[2] ~= c[2] then
+    return
+  end
+  local text = vim.fn.getregion(v, c, { type = "v" })[1]
+  if not text or #text < 2 or not text:find("%S") then
+    return
+  end
+
+  local sel_row, sel_col = v[2] - 1, math.min(v[3], c[3]) - 1
+  local first, last = vim.fn.line("w0"), vim.fn.line("w$")
+  for i, line in ipairs(vim.api.nvim_buf_get_lines(buf, first - 1, last, false)) do
+    local row, from = first + i - 2, 1
+    while true do
+      local s, e = line:find(text, from, true)
+      if not s then
+        break
+      end
+      if row ~= sel_row or s - 1 ~= sel_col then
+        vim.api.nvim_buf_set_extmark(buf, selection_ns, row, s - 1, {
+          end_col = e,
+          hl_group = "SelectionMatch",
+          priority = 150,
+        })
+      end
+      from = e + 1
+    end
+  end
+end
+
+local selection_group = vim.api.nvim_create_augroup("selection_matches", { clear = true })
+vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged", "WinScrolled" }, {
+  group = selection_group,
+  callback = highlight_selection_matches,
+})
+vim.api.nvim_create_autocmd("ColorScheme", {
+  group = selection_group,
+  callback = set_selection_match_hl,
+})
