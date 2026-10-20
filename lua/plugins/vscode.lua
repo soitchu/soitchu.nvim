@@ -4,6 +4,13 @@ return {
   priority = 1000,
   opts = {
     style = "dark",
+    -- The theme's float background (#202020) is one shade off the editor's
+    -- (#1F1F1F), so popups blend into the code. Use VS Code's own hover
+    -- widget colors instead.
+    group_overrides = {
+      NormalFloat = { bg = "#252526" },
+      FloatBorder = { fg = "#454545", bg = "#252526" },
+    },
   },
   config = function(_, opts)
     require("vscode").setup(opts)
