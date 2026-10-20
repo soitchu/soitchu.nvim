@@ -11,6 +11,8 @@ end
 return {
   "neovim/nvim-lspconfig",
   opts = {
+    -- Inline type hints start off; <leader>uh toggles them per buffer.
+    inlay_hints = { enabled = false },
     servers = {
       -- Trouble's lsp_references mode groups hits by file (it sets
       -- `groups = { { "filename", ... } }`), which reads far better than the
