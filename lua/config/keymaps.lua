@@ -349,6 +349,14 @@ if is_mac then
   vim.keymap.set("n", "<D-C-k>", "5<C-w>+", { desc = "Increase window height" })
 end
 
+-- Same resizes on the leader. A leader sequence never reaches the OS, so these
+-- still work when a launcher or window manager has claimed the Cmd+Ctrl pair
+-- (Raycast binds window management there by default).
+vim.keymap.set("n", "<leader>wh", "10<C-w><", { desc = "Narrow window" })
+vim.keymap.set("n", "<leader>wl", "10<C-w>>", { desc = "Widen window" })
+vim.keymap.set("n", "<leader>wj", "5<C-w>-", { desc = "Shorter window" })
+vim.keymap.set("n", "<leader>wk", "5<C-w>+", { desc = "Taller window" })
+
 -- Neovim 0.11 ships default LSP mappings (grr, gri, gra, grn, grt) that all
 -- start with `gr`. LazyVim binds `gr` itself, so each press has to wait out
 -- `timeoutlen` in case another key follows, and a stray second key fires the
