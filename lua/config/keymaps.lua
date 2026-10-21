@@ -258,6 +258,14 @@ end
 
 vim.keymap.set("n", "<A-h>", nav_horizontal("h"), { desc = "Window/buffer/tab left" })
 vim.keymap.set("n", "<A-l>", nav_horizontal("l"), { desc = "Window/buffer/tab right" })
+
+-- LazyVim's <S-h>/<S-l> and [b/]b use :bprevious/:bnext, which follow buffer
+-- numbers rather than barbar's on-screen order, so after reordering tabs they
+-- skip around. Step through the tabs as barbar shows them instead.
+vim.keymap.set("n", "<S-h>", "<cmd>BufferPrevious<cr>", { desc = "Prev Buffer" })
+vim.keymap.set("n", "<S-l>", "<cmd>BufferNext<cr>", { desc = "Next Buffer" })
+vim.keymap.set("n", "[b", "<cmd>BufferPrevious<cr>", { desc = "Prev Buffer" })
+vim.keymap.set("n", "]b", "<cmd>BufferNext<cr>", { desc = "Next Buffer" })
 vim.keymap.set("n", "<A-j>", "<C-w>j", { desc = "Go to lower window" })
 vim.keymap.set("n", "<A-k>", "<C-w>k", { desc = "Go to upper window" })
 
