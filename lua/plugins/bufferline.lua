@@ -179,6 +179,36 @@ local function setup_focus_recent_on_close()
   end
 end
 
+-- When two tabs share a file name, barbar adds just enough parent folders to
+-- tell them apart (cxt/package.json). Show each one's full path from the cwd
+-- instead (packages/cxt/package.json). Paths too long for a tab lose their
+-- *start*, so the file name always stays visible.
+local function setup_relative_clash_names()
+  local buffer = require("barbar.buffer")
+  local get_unique_names, format_name = buffer.get_unique_names, buffer.format_name
+  local max_length = require("barbar.config").options.maximum_length
+
+  -- Barbar only calls this for a group of tabs whose names clash.
+  buffer.get_unique_names = function(bufnrs)
+    local paths = {}
+    for i, bufnr in ipairs(bufnrs) do
+      local name = vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].buftype == "" and vim.api.nvim_buf_get_name(bufnr)
+      if not name or name == "" then
+        return get_unique_names(bufnrs) -- a terminal or scratch buffer: barbar's way
+      end
+      paths[i] = vim.fn.fnamemodify(name, ":~:.")
+    end
+    return paths
+  end
+
+  buffer.format_name = function(name)
+    if vim.api.nvim_strwidth(name) <= max_length or not name:find("/") then
+      return format_name(name)
+    end
+    return "…" .. vim.fn.strcharpart(name, vim.fn.strchars(name) - (max_length - 1))
+  end
+end
+
 return {
   -- Disable bufferline
   { "akinsho/bufferline.nvim", enabled = false },
@@ -216,6 +246,7 @@ return {
       end, { desc = "Close buffer on right-click" })
       setup_tab_hover()
       setup_focus_recent_on_close()
+      setup_relative_clash_names()
     end,
   },
 }
