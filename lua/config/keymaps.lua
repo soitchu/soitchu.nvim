@@ -11,7 +11,11 @@ end
 
 vim.keymap.set({ "n", "i", "v" }, cmd("z"), "<cmd>undo<cr>", { desc = "Undo" })
 vim.keymap.set({ "n", "i", "v" }, cmd("S-z"), "<cmd>redo<cr>", { desc = "Redo" })
-vim.keymap.set("n", "<A-q>", "<cmd>bd<cr>", { desc = "Close buffer" })
+-- Close tabs through barbar so they all land on the previously used tab (see
+-- plugins/bufferline.lua). `confirm` asks to save unsaved changes, and the
+-- window layout stays as it is.
+vim.keymap.set("n", "<A-q>", "<cmd>confirm BufferClose<cr>", { desc = "Close buffer" })
+vim.keymap.set("n", "<leader>bd", "<cmd>confirm BufferClose<cr>", { desc = "Delete Buffer" })
 vim.keymap.set({ "n", "t" }, "<C-`>", function()
   Snacks.terminal.toggle()
   vim.schedule(function()

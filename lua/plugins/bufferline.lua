@@ -118,6 +118,51 @@ local function setup_tab_hover()
   end, vim.api.nvim_create_namespace("barbar_tab_hover"))
 end
 
+-- Closing a tab focuses the tab you were on before it, walking back through
+-- the full history like VS Code does. Barbar's own focus_on_close = "previous"
+-- only knows the alternate buffer (#), which is one step deep: close two tabs
+-- in a row and the second falls back to the tab on the right.
+local function setup_focus_recent_on_close()
+  local recent = {} -- most recently entered first
+
+  local function forget(bufnr)
+    for i = #recent, 1, -1 do
+      if recent[i] == bufnr then
+        table.remove(recent, i)
+      end
+    end
+  end
+
+  local group = vim.api.nvim_create_augroup("barbar_recent_buffers", { clear = true })
+  vim.api.nvim_create_autocmd("BufEnter", {
+    group = group,
+    callback = function(args)
+      if vim.bo[args.buf].buflisted and vim.bo[args.buf].buftype == "" then
+        forget(args.buf)
+        table.insert(recent, 1, args.buf)
+      end
+    end,
+  })
+  vim.api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
+    group = group,
+    callback = function(args)
+      forget(args.buf)
+    end,
+  })
+
+  -- Every barbar close (BufferClose, the tab's ×, right-click) asks this.
+  local state = require("barbar.state")
+  local focus_on_close = state.get_focus_on_close
+  state.get_focus_on_close = function(closing)
+    for _, bufnr in ipairs(recent) do
+      if bufnr ~= closing and vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].buflisted then
+        return bufnr
+      end
+    end
+    return focus_on_close(closing)
+  end
+end
+
 return {
   -- Disable bufferline
   { "akinsho/bufferline.nvim", enabled = false },
@@ -154,6 +199,7 @@ return {
         end
       end, { desc = "Close buffer on right-click" })
       setup_tab_hover()
+      setup_focus_recent_on_close()
     end,
   },
 }
