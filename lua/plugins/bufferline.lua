@@ -150,13 +150,29 @@ local function setup_focus_recent_on_close()
     end,
   })
 
-  -- Every barbar close (BufferClose, the tab's ×, right-click) asks this.
+  -- Only land on tabs backed by a file on disk, never a [No Name] scratch
+  -- buffer or one named after a file that was never written.
+  local function is_saved_file(bufnr, closing)
+    if bufnr == closing or not vim.api.nvim_buf_is_valid(bufnr) then
+      return false
+    end
+    if not vim.bo[bufnr].buflisted or vim.bo[bufnr].buftype ~= "" then
+      return false
+    end
+    local name = vim.api.nvim_buf_get_name(bufnr)
+    return name ~= "" and (vim.uv or vim.loop).fs_stat(name) ~= nil
+  end
+
+  -- Every barbar close (BufferClose, the tab's ×, right-click) asks this:
+  -- the most recently used saved file, else the first one in the tab bar.
   local state = require("barbar.state")
   local focus_on_close = state.get_focus_on_close
   state.get_focus_on_close = function(closing)
-    for _, bufnr in ipairs(recent) do
-      if bufnr ~= closing and vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].buflisted then
-        return bufnr
+    for _, list in ipairs({ recent, state.buffers }) do
+      for _, bufnr in ipairs(list) do
+        if is_saved_file(bufnr, closing) then
+          return bufnr
+        end
       end
     end
     return focus_on_close(closing)
