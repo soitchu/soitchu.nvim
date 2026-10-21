@@ -10,6 +10,10 @@ return {
     group_overrides = {
       NormalFloat = { bg = "#252526" },
       FloatBorder = { fg = "#454545", bg = "#252526" },
+      -- Explorer's current file, VS Code's list selection colors: focused
+      -- (activeSelectionBackground) and not (inactiveSelectionBackground).
+      SnacksPickerListCursorLine = { bg = "#04395E" },
+      SnacksPickerListCursorLineNC = { bg = "#37373D" },
     },
   },
   config = function(_, opts)
