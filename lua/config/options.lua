@@ -21,6 +21,10 @@ vim.g.neovide_padding_bottom = 4
 -- Don't move cursor when scrolling
 vim.o.scrolloff = 0
 
+-- One line per wheel tick so trackpad scrolling looks smooth (snacks.scroll
+-- deliberately doesn't animate mouse scrolls)
+vim.o.mousescroll = "ver:1,hor:2"
+
 -- Neovim doesn't detect .mdx at all, and nvim-treesitter ships no mdx parser.
 -- Treat it as markdown (the compound filetype still lets `mdx` ftplugins and
 -- LSP configs target it) and point treesitter at the markdown parser.
