@@ -229,6 +229,15 @@ return {
       icons = {
         buffer_index = false,
         filetype = { enabled = true },
+        -- Error count, then lines added/changed/deleted vs git (from gitsigns).
+        diagnostics = {
+          [vim.diagnostic.severity.ERROR] = { enabled = true, icon = " " },
+        },
+        gitsigns = {
+          added = { enabled = true, icon = "+" },
+          changed = { enabled = true, icon = "~" },
+          deleted = { enabled = true, icon = "-" },
+        },
         button = "×",
         separator = { left = "", right = "" },
         inactive = { separator = { left = "", right = "" } },
